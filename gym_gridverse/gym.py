@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import time
+import typing
 from functools import partial
 from typing import Callable, Dict, List, Optional
 
-import gym
+import gymnasium as gym
 import numpy as np
 import pkg_resources
-from gym.utils import seeding
+from gymnasium.utils import seeding
 
 from gym_gridverse.envs.yaml.factory import factory_env_from_yaml
 from gym_gridverse.outer_env import OuterEnv
@@ -26,7 +27,7 @@ def outer_space_to_gym_space(space: Dict[str, Space]) -> gym.spaces.Space:
             k: gym.spaces.Box(
                 low=v.lower_bound,
                 high=v.upper_bound,
-                dtype=float if v.space_type is SpaceType.CONTINUOUS else int,
+                dtype=np.floating if v.space_type is SpaceType.CONTINUOUS else np.integer,
             )
             for k, v in space.items()
         }
@@ -48,7 +49,7 @@ class GymEnvironment(gym.Env):
 
     # NOTE accepting an environment instance as input is a bad idea because it
     # would need to be instantiated during gym registration
-    def __init__(self, outer_env: OuterEnv):
+    def __init__(self, outer_env: OuterEnv, render_mode='human'):
         super().__init__()
 
         self.outer_env = outer_env
@@ -73,11 +74,7 @@ class GymEnvironment(gym.Env):
 
         self._state_viewer = None
         self._observation_viewer = None
-
-    def seed(self, seed: Optional[int] = None) -> List[int]:
-        actual_seed = seeding.create_seed(seed)
-        self.outer_env.inner_env.set_seed(actual_seed)
-        return [actual_seed]
+        self.render_mode = render_mode
 
     def set_state_representation(self, name: str):
         """Changes the state representation."""
@@ -111,14 +108,19 @@ class GymEnvironment(gym.Env):
         """Returns the representation of the current observation."""
         return self.outer_env.observation
 
-    def reset(self) -> Dict[str, np.ndarray]:
+    def reset(self,seed: int | None = None,
+        options: dict[str, typing.Any] | None = None,
+    ) -> tuple[Dict[str, np.ndarray], dict[str, typing.Any]]:
         """Resets the state of the environment.
 
         Returns:
             Dict[str, numpy.ndarray]: initial observation
         """
+        super().reset(seed=seed)
+        rng, actual_seed = seeding.np_random(seed)
+        self.outer_env.inner_env.set_seed(rng, actual_seed)
         self.outer_env.reset()
-        return self.observation
+        return self.observation, {}
 
     def step(self, action: int):
         """Runs the environment dynamics for one timestep.
@@ -130,16 +132,17 @@ class GymEnvironment(gym.Env):
             Tuple[Dict[str, numpy.ndarray], float, bool, Dict]: (observation, reward, terminal, info dictionary)
         """
         action_ = self.outer_env.action_space.int_to_action(action)
-        reward, done = self.outer_env.step(action_)
-        return self.observation, reward, done, {}
+        reward, terminated = self.outer_env.step(action_)
+        truncated = False
+        return self.observation, reward, terminated, truncated, {}
 
-    def render(self, mode='human'):
+    def render(self):
         # TODO: test
         # only import rendering if actually rendering (avoid importing when
         # using library remotely using ssh on a display-less environment)
         from gym_gridverse.rendering import GridVerseViewer
 
-        if mode not in [
+        if self.render_mode not in [
             'human',
             'human_state',
             'human_observation',
@@ -147,13 +150,13 @@ class GymEnvironment(gym.Env):
             'rgb_array_state',
             'rgb_array_observation',
         ]:
-            super().render(mode)
+            super().render()
 
         # not reset yet
         if self.outer_env.inner_env.state is None:
             return
 
-        if mode in ['human', 'human_state']:
+        if self.render_mode in ['human', 'human_state']:
             if self._state_viewer is None:
                 self._state_viewer = GridVerseViewer(
                     self.outer_env.inner_env.state_space.grid_shape,
@@ -165,7 +168,7 @@ class GymEnvironment(gym.Env):
 
             self._state_viewer.render(self.outer_env.inner_env.state)
 
-        if mode in ['human', 'human_observation']:
+        if self.render_mode in ['human', 'human_observation']:
             if self._observation_viewer is None:
                 self._observation_viewer = GridVerseViewer(
                     self.outer_env.inner_env.observation_space.grid_shape,
@@ -181,7 +184,7 @@ class GymEnvironment(gym.Env):
 
         rgb_arrays = []
 
-        if mode in ['rgb_array', 'rgb_array_state']:
+        if self.render_mode in ['rgb_array', 'rgb_array_state']:
             if self._state_viewer is None:
                 self._state_viewer = GridVerseViewer(
                     self.outer_env.inner_env.state_space.grid_shape,
@@ -197,7 +200,7 @@ class GymEnvironment(gym.Env):
             )
             rgb_arrays.append(rgb_array_state)
 
-        if mode in ['rgb_array', 'rgb_array_observation']:
+        if self.render_mode in ['rgb_array', 'rgb_array_observation']:
             if self._observation_viewer is None:
                 self._observation_viewer = GridVerseViewer(
                     self.outer_env.inner_env.observation_space.grid_shape,
@@ -246,14 +249,16 @@ class GymStateWrapper(gym.Wrapper):
     def observation(self) -> Dict[str, np.ndarray]:
         return self.env.state
 
-    def reset(self) -> Dict[str, np.ndarray]:
+    def reset(self,seed: int | None = None,
+        options: dict[str, typing.Any] | None = None,
+    ) -> tuple[Dict[str, np.ndarray], dict[str, typing.Any]]:
         """reset the environment state
 
         Returns:
             Dict[str, numpy.ndarray]: initial state
         """
-        self.env.reset()
-        return self.observation
+        self.env.reset(seed=seed, options=options)
+        return self.observation, {}
 
     def step(self, action: int):
         """performs environment step
@@ -264,9 +269,9 @@ class GymStateWrapper(gym.Wrapper):
         Returns:
             Tuple[Dict[str, numpy.ndarray], float, bool, Dict]: (state, reward, terminal, info dictionary)
         """
-        observation, reward, done, info = self.env.step(action)
+        observation, reward, terminated, truncated, info = self.env.step(action)
         info['observation'] = observation
-        return self.observation, reward, done, info
+        return self.observation, reward, terminated, truncated, info
 
 
 STRING_TO_YAML_FILE: Dict[str, str] = {

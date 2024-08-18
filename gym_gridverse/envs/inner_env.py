@@ -1,6 +1,8 @@
 import abc
 from typing import Optional, Tuple
 
+import numpy as np
+
 from gym_gridverse.action import Action
 from gym_gridverse.observation import Observation
 from gym_gridverse.spaces import ActionSpace, ObservationSpace, StateSpace
@@ -33,7 +35,7 @@ class InnerEnv(metaclass=abc.ABCMeta):
         self._observation: Optional[Observation] = None
 
     @abc.abstractmethod
-    def set_seed(self, seed: Optional[int] = None):
+    def set_seed(self,rng:np.random.Generator = None, seed: Optional[int] = None):
         assert False, "Must be implemented by derived class"
 
     @abc.abstractmethod

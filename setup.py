@@ -12,11 +12,11 @@ with open('HISTORY.rst') as history_file:
 
 requirements = [
     'pyglet<=1.5.27',
-    'gym<=0.21.0',
+    'gymnasium~=0.29.1',
     'imageio',
     'imageio-ffmpeg',
     'more_itertools',
-    'numpy>=1.20.0',
+    'numpy>=1.22.2',
     'pyyaml',
     'schema',
     'typing-extensions',

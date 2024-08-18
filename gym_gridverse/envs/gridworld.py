@@ -1,5 +1,6 @@
 from typing import Optional, Tuple
 
+import numpy as np
 import numpy.random as rnd
 
 from gym_gridverse.action import Action
@@ -59,8 +60,10 @@ class GridWorld(InnerEnv):
 
         super().__init__(state_space, action_space, observation_space)
 
-    def set_seed(self, seed: Optional[int] = None):
-        self._rng = make_rng(seed)
+    def set_seed(self, rng:np.random.Generator = None, seed: Optional[int] = None,):
+        self._rng = rng
+        if self._rng is None:
+            self._rng = make_rng(seed)
 
     def functional_reset(self) -> State:
         state = self._reset_function(rng=self._rng)
