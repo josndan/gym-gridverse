@@ -108,9 +108,9 @@ class GymEnvironment(gym.Env):
         """Returns the representation of the current observation."""
         return self.outer_env.observation
 
-    def reset(self,seed: int | None = None,
-        options: dict[str, typing.Any] | None = None,
-    ) -> tuple[Dict[str, np.ndarray], dict[str, typing.Any]]:
+    def reset(self, seed: int | None = None,
+              options: dict[str, typing.Any] | None = None,
+              ) -> tuple[Dict[str, np.ndarray], dict[str, typing.Any]]:
         """Resets the state of the environment.
 
         Returns:
@@ -249,9 +249,9 @@ class GymStateWrapper(gym.Wrapper):
     def observation(self) -> Dict[str, np.ndarray]:
         return self.env.state
 
-    def reset(self,seed: int | None = None,
-        options: dict[str, typing.Any] | None = None,
-    ) -> tuple[Dict[str, np.ndarray], dict[str, typing.Any]]:
+    def reset(self, seed: int | None = None,
+              options: dict[str, typing.Any] | None = None,
+              ) -> tuple[Dict[str, np.ndarray], dict[str, typing.Any]]:
         """reset the environment state
 
         Returns:

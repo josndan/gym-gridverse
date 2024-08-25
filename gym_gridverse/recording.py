@@ -9,7 +9,6 @@ from typing import (
     List,
     Optional,
     Sequence,
-    TypeAlias,
     TypeVar,
     Union,
     cast,
@@ -26,7 +25,7 @@ from gym_gridverse.rendering import GridVerseViewer
 from gym_gridverse.state import State
 from gym_gridverse.utils.rl import make_return_computer
 
-Image: TypeAlias = np.ndarray
+Image = np.ndarray
 """An image, alias to np.ndarray"""
 
 FrameType = TypeVar('FrameType', State, Observation, np.ndarray)
