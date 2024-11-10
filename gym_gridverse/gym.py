@@ -27,7 +27,7 @@ def outer_space_to_gym_space(space: Dict[str, Space]) -> gym.spaces.Space:
             k: gym.spaces.Box(
                 low=v.lower_bound,
                 high=v.upper_bound,
-                dtype=np.float32 if v.space_type is SpaceType.CONTINUOUS else np.int32,
+                dtype=np.float64 if v.space_type is SpaceType.CONTINUOUS else np.int32,
             )
             for k, v in space.items()
         }
